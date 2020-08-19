@@ -1,25 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CloudHeavenApi.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {
+        private readonly IAuthService _authService;
 
         private readonly HeavenContext _context;
-        private readonly AuthService _authService;
 
-        public AuthController(HeavenContext context, AuthService authService)
+        public AuthController(HeavenContext context, IAuthService authService)
         {
             _context = context;
             _authService = authService;
@@ -29,20 +25,22 @@ namespace CloudHeavenApi.Controllers
         [HttpPost("authenticate")]
         public async Task<ActionResult<TokenProfile>> Authenticate([FromBody] AuthenticateRequest request)
         {
-            TokenProfile tokenProfile;
-            try
-            {
-                tokenProfile = await _authService.Authenticate(request);
-            }
-            catch (AuthException e)
-            {
-                return Unauthorized(e.ErrorResponse);
-            }
+            var tokenProfile = await _authService.Authenticate(request);
 
-            var ac = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(ac => ac.Uuid == tokenProfile.UUID);
+            /*
+            var ac = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(account => account.Uuid == tokenProfile.UUID);
             if (ac == null)
             {
-                return Unauthorized(new { error = "尚未在伺服器登入。"});
+                await _authService.Invalidate(new AuthorizeRequest
+                {
+                    AccessToken = tokenProfile.AccessToken,
+                    ClientToken = tokenProfile.ClientToken
+                });
+                throw new AuthException(new ErrorResponse
+                {
+                    Error = "未知的賬戶",
+                    ErrorMessage = "你從未到伺服器登入過。"
+                });
             }
 
             if (ac.UserName == tokenProfile.UserName) return Ok(ac);
@@ -51,31 +49,33 @@ namespace CloudHeavenApi.Controllers
             ac.UserName = tokenProfile.UserName;
             _context.Entry(ac).State = EntityState.Modified;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException e)
-            {
-                //throw;
-                return BadRequest(e);
-            }
+            await _context.SaveChangesAsync();
+            */
 
-            return Ok(ac);
-
+            var wa = new WebAccount
+            {
+                Admin = true,
+                NickName = "陳大明",
+                UserName = tokenProfile.UserName,
+                Uuid = tokenProfile.UUID
+            };
+            return Ok(new
+            {
+                user = new User(wa),
+                token = new
+                {
+                    accessToken = tokenProfile.AccessToken,
+                    clientToken = tokenProfile.ClientToken
+                }
+            });
         }
 
         [HttpPost("signout")]
         public async Task<ActionResult> SignOut([FromBody] AuthorizeRequest request)
         {
-            if (await _authService.Invalidate(request))
-            {
-                return Ok();
-            }
+            if (await _authService.Invalidate(request)) return Ok();
 
             return Unauthorized();
         }
-
-
     }
 }

@@ -1,21 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Threading.Tasks;
-using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
-using Microsoft.AspNetCore.Mvc;
 
 namespace CloudHeavenApi.Services
 {
-    public interface AuthService
+    public interface IAuthService
     {
         Task<TokenProfile> Authenticate(AuthenticateRequest request);
 
         Task<bool> Invalidate(AuthorizeRequest request);
 
-        Task<TokenProfile> Refresh(AuthorizeRequest request);
+        Identity Recognize(string clientToken);
 
+        Task<TokenProfile> Validate(AuthorizeRequest request);
+
+        Task<TokenProfile> Refresh(AuthorizeRequest request);
+    }
+
+    public class Identity
+    {
+        public Guid UUID { get; set; }
+        public string UserName { get; set; }
     }
 
     public class TokenProfile
@@ -24,12 +30,12 @@ namespace CloudHeavenApi.Services
         public string UserName { get; set; }
         public string AccessToken { get; set; }
         public string ClientToken { get; set; }
-
     }
 
     public class AuthException : Exception
     {
         public readonly ErrorResponse ErrorResponse;
+
         public AuthException(ErrorResponse response)
         {
             ErrorResponse = response;
@@ -40,6 +46,7 @@ namespace CloudHeavenApi.Services
     {
         public string Error { get; set; }
         public string ErrorMessage { get; set; }
-        public string? Cause { get; set; }
+        public string CauseFrom { get; set; }
+        public string[] Cause { get; set; }
     }
 }

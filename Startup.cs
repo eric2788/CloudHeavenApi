@@ -1,32 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
+using CloudHeavenApi.MiddleWaresAndFilters;
 using CloudHeavenApi.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace CloudHeavenApi
 {
     public class Startup
     {
-        internal static readonly string[] AllowOrigins = new[] {
+        internal static readonly string[] AllowOrigins =
+        {
             "http://localhost:5000"
         };
-
-        private void UseMySQL(DbContextOptionsBuilder builder)
-        {
-            builder.UseMySql(Configuration.GetConnectionString("CloudHeavenDb"));
-        }
 
         public Startup(IConfiguration configuration)
         {
@@ -34,6 +23,11 @@ namespace CloudHeavenApi
         }
 
         public IConfiguration Configuration { get; }
+
+        private void UseMySQL(DbContextOptionsBuilder builder)
+        {
+            builder.UseMySql(Configuration.GetConnectionString("CloudHeavenDb"));
+        }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -50,25 +44,21 @@ namespace CloudHeavenApi
                         .AllowAnyMethod();
                 });
 
-                setup.AddDefaultPolicy(builder =>
-                {
-                    builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-                });
-
+                setup.AddDefaultPolicy(builder => { builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod(); });
             });
 
-            services.AddSingleton<AuthService, MojangService>();
+            services.AddSingleton<IAuthService, MojangService>();
 
             services.AddControllersWithViews();
+
+            services.AddMvc(setup => setup.Filters.Add<ExceptionFilters>());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+
+            if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
 
             app.UseAuthentication();
 
@@ -78,10 +68,8 @@ namespace CloudHeavenApi
 
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
+            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
         }
     }
 }

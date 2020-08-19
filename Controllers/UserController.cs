@@ -1,54 +1,37 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CloudHeavenApi.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class UserController : ControllerBase
     {
+        private readonly IAuthService _authService;
         private readonly HeavenContext _context;
-        private readonly AuthService _authService;
 
-        public UserController(HeavenContext context, AuthService authService)
+        public UserController(HeavenContext context, IAuthService authService)
         {
             _context = context;
             _authService = authService;
         }
 
-        [HttpGet("User")]
-        public async Task<ActionResult> GetUsers([FromBody] AuthorizeRequest request, [FromQuery] int page)
+        [HttpPost]
+        public async Task<ActionResult> GetUsers([FromBody] AuthorizeRequest request, [FromQuery] int page = 1)
         {
-            TokenProfile tokenProfile;
-            try
-            {
-                tokenProfile = await _authService.Refresh(request);
-            }
-            catch (AuthException e)
-            {
-                return Unauthorized(e.ErrorResponse);
-            }
-
-            var list = await _context.WebAccounts.Skip(30 * Math.Max(0, page - 1)).Take(30)
-                .Include(s => s.PersonBadgeses.Select(b => b.Badge))
-                .Select(s => new User
+            var tokenProfile = await _authService.Validate(request);
+            var accounts = await _context.WebAccounts.Skip(30 * Math.Max(0, page - 1)).Take(30).ToListAsync();
+            var list = accounts.GroupJoin(
+                _context.PersonBadges, ac => ac.Uuid, pb => pb.Uuid, (ac, pb) => new User(ac)
                 {
-                    Admin = s.Admin,
-                    Badges = s.PersonBadgeses.Where(b => b.Uuid == s.Uuid).Select(b => b.Badge).ToArray(),
-                    NickName = s.NickName,
-                    UserName = s.UserName,
-                    Uuid = s.Uuid
-                }).ToListAsync();
-
+                    Badges = pb.DefaultIfEmpty().Select(s => s.Badge).ToArray()
+                });
             return Ok(new {list, tokenProfile});
         }
     }

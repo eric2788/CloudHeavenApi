@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace CloudHeavenApi.Models
 {
     public class AuthorizeRequest
     {
-        [Required]
-        public string AccessToken { get; set; }
-        [Required]
-        public string ClientToken { get; set; }
+        [Required] public string accessToken { get; set; }
+
+        [Required] public string clientToken { get; set; }
     }
 }
