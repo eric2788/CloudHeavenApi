@@ -57,7 +57,8 @@ namespace CloudHeavenApi.Controllers
                 Admin = true,
                 NickName = "陳大明",
                 UserName = tokenProfile.UserName,
-                Uuid = tokenProfile.UUID
+                Uuid = tokenProfile.UUID,
+                Status = "沒有狀態"
             };
             return Ok(new
             {

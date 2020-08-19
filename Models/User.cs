@@ -12,7 +12,6 @@ namespace CloudHeavenApi.Models
             UserName = account.UserName;
             NickName = account.NickName;
             Admin = account.Admin;
-            Badges = account.PersonBadgeses?.Where(p => p.Uuid == Uuid).Select(p => p.Badge).ToArray() ?? new Badge[0];
         }
 
         public User()
@@ -25,6 +24,5 @@ namespace CloudHeavenApi.Models
         public string NickName { get; set; }
 
         public bool Admin { get; set; }
-        public Badge[] Badges { get; set; }
     }
 }

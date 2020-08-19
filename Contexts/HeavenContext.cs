@@ -36,6 +36,10 @@ namespace CloudHeavenApi.Contexts
 
         public string NickName { get; set; }
 
+        public string Status { get; set; }
+
+        public bool Online { get; set; }
+        public long JoinTime { get; set; }
         public bool Admin { get; set; } = false;
 
         public virtual ICollection<PersonBadges> PersonBadgeses { get; set; }

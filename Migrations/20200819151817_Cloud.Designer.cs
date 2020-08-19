@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CloudHeavenApi.Migrations
 {
     [DbContext(typeof(HeavenContext))]
-    [Migration("20200819112922_CH")]
-    partial class CH
+    [Migration("20200819151817_Cloud")]
+    partial class Cloud
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -60,7 +60,16 @@ namespace CloudHeavenApi.Migrations
                     b.Property<bool>("Admin")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<long>("JoinTime")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("NickName")
+                        .HasColumnType("longtext CHARACTER SET utf8mb4");
+
+                    b.Property<bool>("Online")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Status")
                         .HasColumnType("longtext CHARACTER SET utf8mb4");
 
                     b.Property<string>("UserName")
