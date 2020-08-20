@@ -64,9 +64,6 @@ namespace CloudHeavenApi.Migrations
                     b.Property<string>("NickName")
                         .HasColumnType("longtext CHARACTER SET utf8mb4");
 
-                    b.Property<bool>("Online")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("Status")
                         .HasColumnType("longtext CHARACTER SET utf8mb4");
 

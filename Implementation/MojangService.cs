@@ -16,13 +16,13 @@ namespace CloudHeavenApi.Services
 
         private readonly HttpClient _client = new HttpClient();
 
-        private readonly Dictionary<string, Identity> _clientToken = new Dictionary<string, Identity>();
-
         private readonly ILogger<MojangService> _logger;
+        private readonly ICacheService<Identity> _cacheService;
 
-        public MojangService(ILogger<MojangService> logger)
+        public MojangService(ILogger<MojangService> logger, ICacheService<Identity> cacheService)
         {
             _logger = logger;
+            _cacheService = cacheService;
         }
 
         public async Task<TokenProfile> Authenticate(AuthenticateRequest request)
@@ -47,20 +47,12 @@ namespace CloudHeavenApi.Services
         {
             var content = JsonContent(request);
             var response = await _client.PostAsync($"{AuthApi}/invalidate", content);
-            return response.StatusCode == HttpStatusCode.NoContent;
-        }
-
-        public Identity Recognize(string clientToken)
-        {
-            if (!_clientToken.TryGetValue(clientToken, out var id))
-                throw new AuthException(new ErrorResponse
-                {
-                    Error = "Invalid Session",
-                    ErrorMessage = "Invalid Identity"
-                });
-            ;
-
-            return id;
+            if (response.StatusCode == HttpStatusCode.NoContent)
+            {
+                _cacheService.RemoveItem(request.clientToken);
+                return true;
+            }
+            return false;
         }
 
         public async Task<TokenProfile> Validate(AuthorizeRequest request)
@@ -75,7 +67,7 @@ namespace CloudHeavenApi.Services
                 throw new AuthException(error);
             }
 
-            if (!_clientToken.TryGetValue(request.clientToken, out var id))
+            if (!_cacheService.TryGetItem(request.clientToken, out var id))
             {
                 await Invalidate(request);
                 throw new AuthException(new ErrorResponse
@@ -84,8 +76,6 @@ namespace CloudHeavenApi.Services
                     ErrorMessage = "Please ReLogin"
                 });
             }
-
-            ;
 
             return new TokenProfile
             {
@@ -113,11 +103,11 @@ namespace CloudHeavenApi.Services
             }
 
             var authStructure = JsonConvert.DeserializeObject<MojangResponse>(str);
-            _clientToken[authStructure.ClientToken] = new Identity
+            _cacheService.SetItem(authStructure.ClientToken, new Identity
             {
                 UserName = authStructure.SelectedProfile.Name,
                 UUID = authStructure.SelectedProfile.UUID
-            };
+            });
             return new TokenProfile
             {
                 AccessToken = authStructure.AccessToken,

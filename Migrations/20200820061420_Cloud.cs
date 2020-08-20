@@ -30,7 +30,6 @@ namespace CloudHeavenApi.Migrations
                     UserName = table.Column<string>(nullable: true),
                     NickName = table.Column<string>(nullable: true),
                     Status = table.Column<string>(nullable: true),
-                    Online = table.Column<bool>(nullable: false),
                     JoinTime = table.Column<long>(nullable: false),
                     Admin = table.Column<bool>(nullable: false)
                 },

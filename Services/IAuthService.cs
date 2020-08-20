@@ -11,17 +11,9 @@ namespace CloudHeavenApi.Services
 
         Task<bool> Invalidate(AuthorizeRequest request);
 
-        Identity Recognize(string clientToken);
-
         Task<TokenProfile> Validate(AuthorizeRequest request);
 
         Task<TokenProfile> Refresh(AuthorizeRequest request);
-    }
-
-    public class Identity
-    {
-        public Guid UUID { get; set; }
-        public string UserName { get; set; }
     }
 
     public class TokenProfile
