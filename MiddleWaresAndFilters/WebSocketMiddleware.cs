@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using CloudHeavenApi.Services;
+using Microsoft.AspNetCore.Http;
+using System;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using CloudHeavenApi.Models;
-using CloudHeavenApi.Services;
-using Microsoft.AspNetCore.Http;
 
 namespace CloudHeavenApi.MiddleWaresAndFilters
 {
@@ -34,15 +31,9 @@ namespace CloudHeavenApi.MiddleWaresAndFilters
             await Receive(socket, async (result, buffer) =>
             {
                 if (result.MessageType == WebSocketMessageType.Text)
-                {
                     await _socketService.ReceiveAsync(socket, result, buffer);
-                }
 
-                else if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    await _socketService.OnDisconnected(socket);
-                }
-
+                else if (result.MessageType == WebSocketMessageType.Close) await _socketService.OnDisconnected(socket);
             });
         }
 
@@ -52,8 +43,8 @@ namespace CloudHeavenApi.MiddleWaresAndFilters
 
             while (socket.State == WebSocketState.Open)
             {
-                var result = await socket.ReceiveAsync(buffer: new ArraySegment<byte>(buffer),
-                    cancellationToken: CancellationToken.None);
+                var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer),
+                    CancellationToken.None);
 
                 handleMessage(result, buffer);
             }

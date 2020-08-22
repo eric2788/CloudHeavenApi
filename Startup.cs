@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Immutable;
-using System.Linq;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Features;
 using CloudHeavenApi.Implementation;
@@ -20,7 +18,7 @@ namespace CloudHeavenApi
     {
         internal static readonly string[] AllowOrigins =
         {
-            "http://localhost:5000"
+            "http://localhost:63342"
         };
 
         public Startup(IConfiguration configuration)
@@ -42,7 +40,7 @@ namespace CloudHeavenApi
 
             services.AddCors(setup =>
             {
-                setup.AddPolicy("private", builder =>
+                setup.AddDefaultPolicy(builder =>
                 {
                     builder.WithOrigins(AllowOrigins)
                         .AllowCredentials()
@@ -50,12 +48,12 @@ namespace CloudHeavenApi
                         .AllowAnyMethod();
                 });
 
-                setup.AddDefaultPolicy(builder => { builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod(); });
+                setup.AddPolicy("public", builder => { builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod(); });
             });
 
             services.AddSingleton<IAuthService, MojangService>();
             services.RegisterCache<Identity>();
-            services.RegisterCache<object>();
+            services.AddSingleton<WebSocketTable>();
             services.AddSingleton<IWebSocketService, HeavenSocketHandler>();
 
             services.AddTransient<WebSocketMiddleware>();
@@ -68,17 +66,26 @@ namespace CloudHeavenApi
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                app.UseHsts();
+                app.UseHttpsRedirection();
+            }
 
             var options = new WebSocketOptions
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(120),
-                ReceiveBufferSize = 4 * 1024,
+                ReceiveBufferSize = 4 * 1024
             };
-            foreach (var allowOrigin in AllowOrigins)
-            {
-                options.AllowedOrigins.Add(allowOrigin);
-            }
+            foreach (var allowOrigin in AllowOrigins) options.AllowedOrigins.Add(allowOrigin);
+
+            app.UseRouting();
+
+            app.UseCors();
 
             app.UseWebSockets(options);
 
@@ -86,14 +93,9 @@ namespace CloudHeavenApi
 
             app.UseAuthentication();
 
-            app.UseHttpsRedirection();
-
-            app.UseRouting();
-
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
-
         }
     }
 }

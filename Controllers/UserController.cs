@@ -4,11 +4,13 @@ using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CloudHeavenApi.Controllers
 {
+    [EnableCors]
     [Route("[controller]")]
     [ApiController]
     public class UserController : ControllerBase
@@ -26,7 +28,8 @@ namespace CloudHeavenApi.Controllers
         public async Task<ActionResult> GetUsers([FromBody] AuthorizeRequest request, [FromQuery] int page = 1)
         {
             await _authService.Validate(request);
-            var list = await _context.WebAccounts.Skip(30 * Math.Max(0, page - 1)).Take(30).Select(ac => new User(ac)).ToListAsync();
+            var list = await _context.WebAccounts.Skip(30 * Math.Max(0, page - 1)).Take(30).Select(ac => new User(ac))
+                .ToListAsync();
             return Ok(list);
         }
 
@@ -34,16 +37,16 @@ namespace CloudHeavenApi.Controllers
         public async Task<ActionResult> GetSelf([FromBody] AuthorizeRequest request)
         {
             var tokenProfile = await _authService.Validate(request);
-            var self = await _context.WebAccounts.Where(s => s.Uuid == tokenProfile.UUID).GroupJoin(_context.PersonBadges, account => account.Uuid, bd => bd.Uuid,
-                (account, list) => new {account, Badges = list.DefaultIfEmpty().Select(b => b.Badge)} ).FirstOrDefaultAsync();
+            var self = await _context.WebAccounts.Where(s => s.Uuid == tokenProfile.UUID).GroupJoin(
+                    _context.PersonBadges, account => account.Uuid, bd => bd.Uuid,
+                    (account, list) => new {account, Badges = list.DefaultIfEmpty().Select(b => b.Badge)})
+                .FirstOrDefaultAsync();
             if (self == null)
-            {
                 return NotFound(new ErrorResponse
                 {
                     Error = "404 Not Found",
                     ErrorMessage = $"Cannot Find Account {tokenProfile.UUID}"
                 });
-            }
             return Ok(self);
         }
 
@@ -51,39 +54,39 @@ namespace CloudHeavenApi.Controllers
         public async Task<ActionResult> UpdateSelf([FromBody] AccountEditor editor)
         {
             var tokenProfile = await _authService.Validate(editor.Request);
-            var toUpdate = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(ac => ac.Uuid == tokenProfile.UUID);
+            var toUpdate = await _context.WebAccounts.AsNoTracking()
+                .FirstOrDefaultAsync(ac => ac.Uuid == tokenProfile.UUID);
             if (toUpdate == null)
-            {
                 return NotFound(new ErrorResponse
                 {
                     Error = "Account NotFound",
                     ErrorMessage = $"Cannot Found The {tokenProfile.UUID} Account"
                 });
-            }
 
             toUpdate.NickName = editor.Editor.NickName;
             toUpdate.Status = editor.Editor.Status;
 
             _context.Entry(toUpdate).State = EntityState.Modified;
             await _context.SaveChangesAsync();
-            return Ok();
+            return NoContent();
         }
 
         [HttpPost("{id}")]
-        public async Task<ActionResult> GetUser(string id,[FromBody] AuthorizeRequest request)
+        public async Task<ActionResult> GetUser(string id, [FromBody] AuthorizeRequest request)
         {
             await _authService.Validate(request);
             var uuid = new Guid(id);
-            var user = await _context.WebAccounts.Where(s => s.Uuid == uuid).GroupJoin(_context.PersonBadges, account => account.Uuid, bd => bd.Uuid,
-                (account, list) => new { account, Badges = list.DefaultIfEmpty().Select(b => b.Badge) }).FirstOrDefaultAsync(); ;
+            var user = await _context.WebAccounts.Where(s => s.Uuid == uuid).GroupJoin(_context.PersonBadges,
+                    account => account.Uuid, bd => bd.Uuid,
+                    (account, list) => new {account, Badges = list.DefaultIfEmpty().Select(b => b.Badge)})
+                .FirstOrDefaultAsync();
+            ;
             if (user == null)
-            {
                 return NotFound(new ErrorResponse
                 {
                     Error = "404 Not Found",
                     ErrorMessage = $"Cannot Find Account {uuid}"
                 });
-            }
             return Ok(user);
         }
 
@@ -94,32 +97,26 @@ namespace CloudHeavenApi.Controllers
             var uuid = new Guid(id);
             var user = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(s => s.Uuid == uuid);
             if (user == null)
-            {
                 return NotFound(new ErrorResponse
                 {
                     Error = "Account NotFound",
                     ErrorMessage = $"Cannot Found The {uuid} Account"
                 });
-            }
 
             var self = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(s => s.Uuid == profile.UUID);
             if (self is null)
-            {
                 return NotFound(new ErrorResponse
                 {
                     Error = "Account NotFound",
                     ErrorMessage = $"Cannot Found The {profile.UUID} Account"
                 });
-            }
 
             if (!self.Admin)
-            {
                 throw new AuthException(new ErrorResponse
                 {
                     Error = "No Permission",
                     ErrorMessage = $"Account {profile.UUID} is not admin"
                 });
-            }
 
             user.NickName = editor.Editor.NickName;
             user.Status = editor.Editor.Status;
@@ -139,16 +136,14 @@ namespace CloudHeavenApi.Controllers
 
             _context.Entry(user).State = EntityState.Modified;
             await _context.SaveChangesAsync();
-            return Ok();
+            return NoContent();
         }
-
     }
 
     public class AccountEditor
     {
         public AuthorizeRequest Request { get; set; }
         public NormalEditor Editor { get; set; }
-
     }
 
     public class NormalEditor

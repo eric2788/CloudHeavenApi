@@ -2,11 +2,12 @@
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CloudHeavenApi.Controllers
 {
+    [EnableCors]
     [Route("[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
@@ -74,7 +75,7 @@ namespace CloudHeavenApi.Controllers
         [HttpPost("signout")]
         public async Task<ActionResult> SignOut([FromBody] AuthorizeRequest request)
         {
-            if (await _authService.Invalidate(request)) return Ok();
+            if (await _authService.Invalidate(request)) return NoContent();
 
             return Unauthorized();
         }

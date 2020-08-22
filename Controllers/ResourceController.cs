@@ -1,14 +1,14 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CloudHeavenApi.Controllers
 {
+    [EnableCors]
     [Route("[controller]")]
     [ApiController]
     public class ResourceController : ControllerBase
@@ -27,15 +27,9 @@ namespace CloudHeavenApi.Controllers
         {
             var tokenProfile = await _authService.Validate(request);
             var self = await _context.WebAccounts.FindAsync(tokenProfile.UUID);
-            if (self == null)
-            {
-                return NotFound(new {Error = $"Account {tokenProfile.UUID} not found"});
-            }
+            if (self == null) return NotFound(new {Error = $"Account {tokenProfile.UUID} not found"});
 
-            if (!self.Admin)
-            {
-                return Unauthorized(new {Error = "You are not admin"});
-            }
+            if (!self.Admin) return Unauthorized(new {Error = "You are not admin"});
 
             return Ok(await _context.Badges.ToListAsync());
         }
@@ -45,19 +39,13 @@ namespace CloudHeavenApi.Controllers
         {
             var tokenProfile = await _authService.Validate(editor.Request);
             var self = await _context.WebAccounts.FindAsync(tokenProfile.UUID);
-            if (self == null)
-            {
-                return NotFound(new { Error = $"Account {tokenProfile.UUID} not found" });
-            }
+            if (self == null) return NotFound(new {Error = $"Account {tokenProfile.UUID} not found"});
 
-            if (!self.Admin)
-            {
-                return Unauthorized(new { Error = "You are not admin" });
-            }
+            if (!self.Admin) return Unauthorized(new {Error = "You are not admin"});
 
             await _context.Badges.AddAsync(editor.Badge);
 
-            return Ok();
+            return NoContent();
         }
 
         [HttpPost("badge/{id}")]
@@ -65,15 +53,9 @@ namespace CloudHeavenApi.Controllers
         {
             var tokenProfile = await _authService.Validate(request);
             var self = await _context.WebAccounts.FindAsync(tokenProfile.UUID);
-            if (self == null)
-            {
-                return NotFound(new { Error = $"Account {tokenProfile.UUID} not found" });
-            }
+            if (self == null) return NotFound(new {Error = $"Account {tokenProfile.UUID} not found"});
 
-            if (!self.Admin)
-            {
-                return Unauthorized(new { Error = "You are not admin" });
-            }
+            if (!self.Admin) return Unauthorized(new {Error = "You are not admin"});
 
             return Ok(await _context.Badges.FindAsync(id));
         }
@@ -83,20 +65,12 @@ namespace CloudHeavenApi.Controllers
         {
             var tokenProfile = await _authService.Validate(editor.Request);
             var self = await _context.WebAccounts.FindAsync(tokenProfile.UUID);
-            if (self == null)
-            {
-                return NotFound(new { Error = $"Account {tokenProfile.UUID} not found" });
-            }
+            if (self == null) return NotFound(new {Error = $"Account {tokenProfile.UUID} not found"});
 
-            if (!self.Admin)
-            {
-                return Unauthorized(new { Error = "You are not admin" });
-            }
+            if (!self.Admin) return Unauthorized(new {Error = "You are not admin"});
 
             if (editor.Badge.BadgeId != id)
-            {
                 return BadRequest(new {Error = "Edit id does not match the badge id from body"});
-            }
 
             try
             {
@@ -106,14 +80,12 @@ namespace CloudHeavenApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (await _context.Badges.AsNoTracking().AnyAsync(s => s.BadgeId == id))
-                {
                     return NotFound(new {Error = $"Badge {id} NotFound"});
-                }
 
                 throw;
             }
 
-            return Ok();
+            return NoContent();
         }
 
         [HttpDelete("badge/{id}")]
@@ -121,27 +93,17 @@ namespace CloudHeavenApi.Controllers
         {
             var tokenProfile = await _authService.Validate(request);
             var self = await _context.WebAccounts.FindAsync(tokenProfile.UUID);
-            if (self == null)
-            {
-                return NotFound(new { Error = $"Account {tokenProfile.UUID} not found" });
-            }
+            if (self == null) return NotFound(new {Error = $"Account {tokenProfile.UUID} not found"});
 
-            if (!self.Admin)
-            {
-                return Unauthorized(new { Error = "You are not admin" });
-            }
+            if (!self.Admin) return Unauthorized(new {Error = "You are not admin"});
 
             var badge = await _context.Badges.FindAsync(id);
-            if (badge == null)
-            {
-                return NotFound(new { Error = $"Badge {id} not found" });
-            }
+            if (badge == null) return NotFound(new {Error = $"Badge {id} not found"});
 
             _context.Badges.Remove(badge);
             await _context.SaveChangesAsync();
-            return Ok();
+            return NoContent();
         }
-
     }
 
     public class BadgeEditor

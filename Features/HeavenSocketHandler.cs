@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using CloudHeavenApi.Implementation;
-using CloudHeavenApi.Services;
-using Microsoft.Extensions.Logging;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using CloudHeavenApi.Implementation;
 using CloudHeavenApi.Models;
+using CloudHeavenApi.Services;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace CloudHeavenApi.Features
@@ -69,7 +68,6 @@ namespace CloudHeavenApi.Features
                                 },
                                 Message = data.Message,
                                 Server = data.Server
-
                             }
                         };
                         break;
@@ -83,7 +81,8 @@ namespace CloudHeavenApi.Features
                         };
                         break;
                     default:
-                        Logger.LogWarning($"The message received from {id} is not match the pattern {nameof(McMessageData)} with type {container.Type}");
+                        Logger.LogWarning(
+                            $"The message received from {id} is not match the pattern {nameof(McMessageData)} with type {container.Type}");
                         break;
                 }
             }
@@ -98,7 +97,8 @@ namespace CloudHeavenApi.Features
                     {
                         if (!_cacheService.TryGetItem(msgData.ClientToken, out var identity))
                         {
-                            Logger.LogWarning($"The message received from {id} does not have any identity in cache (Not Login?)");
+                            Logger.LogWarning(
+                                $"The message received from {id} does not have any identity in cache (Not Login?)");
                             return;
                         }
 
@@ -124,20 +124,16 @@ namespace CloudHeavenApi.Features
                         await SendMessageAsync("mc-server-socket", output);
                         return;
                     default:
-                        Logger.LogWarning($"The message received from {id} is not match the pattern {nameof(McMessageData)}");
+                        Logger.LogWarning(
+                            $"The message received from {id} is not match the pattern {nameof(McMessageData)}");
                         break;
                 }
             }
 
-            if (output is null)
-            {
-                return;
-            }
+            if (output is null) return;
 
             await BroadcastAsync(output, ignoreMc);
         }
-
-
     }
 
     public class SocketMessageContainer
@@ -186,11 +182,15 @@ namespace CloudHeavenApi.Features
 
     public enum ResponseType
     {
-        ServerInfo, Message, Command
+        ServerInfo,
+        Message,
+        Command
     }
 
     public enum RequestType
     {
-        Message, SendServer, SendBrowser
+        Message,
+        SendServer,
+        SendBrowser
     }
 }

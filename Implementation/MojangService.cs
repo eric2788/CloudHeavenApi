@@ -13,11 +13,11 @@ namespace CloudHeavenApi.Services
     public class MojangService : IAuthService
     {
         public static readonly string AuthApi = "https://authserver.mojang.com";
+        private readonly ICacheService<Identity> _cacheService;
 
         private readonly HttpClient _client = new HttpClient();
 
         private readonly ILogger<MojangService> _logger;
-        private readonly ICacheService<Identity> _cacheService;
 
         public MojangService(ILogger<MojangService> logger, ICacheService<Identity> cacheService)
         {
@@ -52,6 +52,7 @@ namespace CloudHeavenApi.Services
                 _cacheService.RemoveItem(request.clientToken);
                 return true;
             }
+
             return false;
         }
 
