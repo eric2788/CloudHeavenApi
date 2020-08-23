@@ -21,16 +21,17 @@ namespace CloudHeavenApi.Implementation
         protected ILogger<IWebSocketService> Logger { get; set; }
 
 
-        public async Task OnConnected(WebSocket socket)
+        public async Task OnConnected(WebSocket socket, string clientToken)
         {
-            WebSocketTable.Add(socket);
+            await WebSocketTable.Add(socket, clientToken);
             await OnSocketConnected(socket);
         }
 
         public async Task OnDisconnected(WebSocket socket)
         {
-            await WebSocketTable.RemoveSocket(WebSocketTable[socket]);
-            await OnSocketConnected(socket);
+            var id = WebSocketTable[socket];
+            await WebSocketTable.RemoveSocket(id);
+            await OnSocketClosed(socket, id);
         }
 
         public abstract Task ReceiveAsync(WebSocket socket, WebSocketReceiveResult result, byte[] buffer);
@@ -67,7 +68,7 @@ namespace CloudHeavenApi.Implementation
 
         public abstract Task OnSocketConnected(WebSocket socket);
 
-        public abstract Task OnSocketClosed(WebSocket socket);
+        public abstract Task OnSocketClosed(WebSocket socket, string id);
 
         protected string GetAsString(WebSocketReceiveResult result, byte[] buffer)
         {

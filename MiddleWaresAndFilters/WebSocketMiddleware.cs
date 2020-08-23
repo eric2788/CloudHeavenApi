@@ -4,37 +4,51 @@ using System;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace CloudHeavenApi.MiddleWaresAndFilters
 {
     public class WebSocketMiddleware : IMiddleware
     {
         private readonly IWebSocketService _socketService;
+        private readonly ILogger<Startup> _logger;
 
-        public WebSocketMiddleware(IWebSocketService socketService)
+        public WebSocketMiddleware(IWebSocketService socketService, ILogger<Startup> logger)
         {
             _socketService = socketService;
+            _logger = logger;
         }
 
 
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
+            _logger.LogInformation("WebSocketMiddleWare Invoking...");
             if (!context.WebSockets.IsWebSocketRequest)
             {
                 await next(context);
                 return;
             }
 
-            var socket = await context.WebSockets.AcceptWebSocketAsync();
-            await _socketService.OnConnected(socket);
-
-            await Receive(socket, async (result, buffer) =>
+            try
             {
-                if (result.MessageType == WebSocketMessageType.Text)
-                    await _socketService.ReceiveAsync(socket, result, buffer);
+                var socket = await context.WebSockets.AcceptWebSocketAsync();
+                var clientToken = context.Request.Query["client"].ToString();
 
-                else if (result.MessageType == WebSocketMessageType.Close) await _socketService.OnDisconnected(socket);
-            });
+                await _socketService.OnConnected(socket, clientToken);
+
+                await Receive(socket, async (result, buffer) =>
+                {
+                    if (result.MessageType == WebSocketMessageType.Text)
+                        await _socketService.ReceiveAsync(socket, result, buffer);
+
+                    else if (result.MessageType == WebSocketMessageType.Close)
+                        await _socketService.OnDisconnected(socket);
+                });
+            }
+            catch (WebSocketException e)
+            {
+                _logger.LogError(e.Message);
+            }
         }
 
         private async Task Receive(WebSocket socket, Action<WebSocketReceiveResult, byte[]> handleMessage)

@@ -29,7 +29,7 @@ namespace CloudHeavenApi.Features
             });
         }
 
-        public override async Task OnSocketClosed(WebSocket socket)
+        public override async Task OnSocketClosed(WebSocket socket, string id)
         {
             await Task.Run(() =>
             {
@@ -42,48 +42,55 @@ namespace CloudHeavenApi.Features
         {
             var container = GetAsObject<SocketMessageContainer>(result, buffer);
             var id = WebSocketTable[socket];
-            Logger.LogInformation($"Received message from socket {id}");
+            Logger.LogInformation($"Received message from socket {id}, message: {JsonConvert.SerializeObject(container)}");
             ResponseData output = null;
             var ignoreMc = false;
 
+            Logger.LogInformation($"type: {container.Type}, Data: {container.Data}");
+            Logger.LogInformation($"Data With JSON: {JsonConvert.SerializeObject(container.Data)}");
+
             // Socket Sent From MC Server
+
+            var containerData = container.Data;
 
             if (id.Equals("mc-server-socket"))
             {
                 ignoreMc = true;
-                switch (container.Data)
+                if (containerData.CanDeserialize<McMessageData>() && container.Type == RequestType.Message)
                 {
-                    case McMessageData data when container.Type == RequestType.Message:
-                        output = new ResponseData
+                    var data = containerData.JsonDeserialize<McMessageData>();
+                    output = new ResponseData
+                    {
+                        Type = ResponseType.Message,
+                        Data = new OutputContainer
                         {
-                            Type = ResponseType.Message,
-                            Data = new OutputContainer
+                            FromMC = true,
+                            Identity = new Identity
                             {
-                                FromMC = true,
-                                Identity = new Identity
-                                {
-                                    NickName = "",
-                                    UserName = data.UserName,
-                                    UUID = data.Guid
-                                },
-                                Message = data.Message,
-                                Server = data.Server
-                            }
-                        };
-                        break;
-                    case McServerData serverData when container.Type == RequestType.SendBrowser:
-                        var map = serverData.StatData;
-                        Logger.LogInformation($"Received Server Information: {JsonConvert.SerializeObject(map)}");
-                        output = new ResponseData
-                        {
-                            Type = ResponseType.ServerInfo,
-                            Data = serverData
-                        };
-                        break;
-                    default:
-                        Logger.LogWarning(
-                            $"The message received from {id} is not match the pattern {nameof(McMessageData)} with type {container.Type}");
-                        break;
+                                NickName = "",
+                                UserName = data.UserName,
+                                UUID = data.Guid
+                            },
+                            Message = data.Message,
+                            Server = data.Server
+                        }
+                    };
+                }
+                else if (containerData.CanDeserialize<McServerData>() && container.Type == RequestType.SendBrowser)
+                {
+                    var serverData = containerData.JsonDeserialize<McServerData>();
+                    var online = serverData.Online;
+                    Logger.LogInformation($"Received Server Information: {JsonConvert.SerializeObject(online)}");
+                    output = new ResponseData
+                    {
+                        Type = ResponseType.ServerInfo,
+                        Data = online
+                    };
+                }
+                else
+                {
+                    Logger.LogWarning(
+                        $"The message received from {id} is not match the pattern MCData with type {container.Type}");
                 }
             }
 
@@ -91,42 +98,32 @@ namespace CloudHeavenApi.Features
 
             else
             {
-                switch (container.Data)
+                if (containerData.CanDeserialize<BrowserMessageData>() && container.Type == RequestType.Message)
                 {
-                    case BrowserMessageData msgData when container.Type == RequestType.Message:
+                    var msgData = containerData.JsonDeserialize<BrowserMessageData>();
+                    if (!_cacheService.TryGetItem(msgData.ClientToken, out var identity))
                     {
-                        if (!_cacheService.TryGetItem(msgData.ClientToken, out var identity))
-                        {
-                            Logger.LogWarning(
-                                $"The message received from {id} does not have any identity in cache (Not Login?)");
-                            return;
-                        }
-
-                        output = new ResponseData
-                        {
-                            Type = ResponseType.Message,
-                            Data = new OutputContainer
-                            {
-                                FromMC = false,
-                                Identity = identity,
-                                Message = msgData.Message,
-                                Server = "Website"
-                            }
-                        };
-                        break;
-                    }
-                    case BrowserCommandData cmdData when container.Type == RequestType.SendServer:
-                        output = new ResponseData
-                        {
-                            Type = ResponseType.Command,
-                            Data = cmdData
-                        };
-                        await SendMessageAsync("mc-server-socket", output);
-                        return;
-                    default:
                         Logger.LogWarning(
-                            $"The message received from {id} is not match the pattern {nameof(McMessageData)}");
-                        break;
+                            $"The message received from {id} does not have any identity in cache (Not Login?)");
+                        return;
+                    }
+
+                    output = new ResponseData
+                    {
+                        Type = ResponseType.Message,
+                        Data = new OutputContainer
+                        {
+                            FromMC = false,
+                            Identity = identity,
+                            Message = msgData.Message,
+                            Server = "Website"
+                        }
+                    };
+                }
+                else
+                {
+                    Logger.LogWarning(
+                        $"The message received from {id} is not match the pattern BrowserData with type {container.Type}");
                 }
             }
 
@@ -164,12 +161,7 @@ namespace CloudHeavenApi.Features
 
     public class McServerData
     {
-        public Dictionary<string, object> StatData { get; set; }
-    }
-
-    public class BrowserCommandData
-    {
-        public string Command { get; set; }
+        public IEnumerable<string> Online { get; set; }
     }
 
     public class OutputContainer
@@ -183,14 +175,33 @@ namespace CloudHeavenApi.Features
     public enum ResponseType
     {
         ServerInfo,
-        Message,
-        Command
+        Message
     }
 
     public enum RequestType
     {
         Message,
-        SendServer,
         SendBrowser
+    }
+
+    public static class SocketMessageExtension
+    {
+        public static bool CanDeserialize<T>(this object o)
+        {
+            try
+            {
+                JsonConvert.DeserializeObject<T>(o.ToString());
+                return true;
+            }
+            catch (JsonSerializationException)
+            {
+                return false;
+            }
+        }
+
+        public static T JsonDeserialize<T>(this object o)
+        {
+            return JsonConvert.DeserializeObject<T>(o.ToString());
+        }
     }
 }

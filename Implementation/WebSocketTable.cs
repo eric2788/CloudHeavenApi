@@ -37,10 +37,14 @@ namespace CloudHeavenApi.Implementation
                     CancellationToken.None);
         }
 
-        public void Add(WebSocket socket)
+        public async Task Add(WebSocket socket, string clientToken)
         {
-            var id = string.IsNullOrEmpty(socket.SubProtocol) ? new Guid().ToString() : socket.SubProtocol;
-            _sockets.TryAdd(id, socket);
+            var id = string.IsNullOrEmpty(clientToken) ? Guid.NewGuid().ToString() : clientToken;
+            if (_sockets.ContainsKey(id))
+            {
+                await RemoveSocket(id);
+            }
+            _sockets[id] = socket;
         }
     }
 }

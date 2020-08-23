@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace CloudHeavenApi.Contexts
 {
@@ -41,6 +42,7 @@ namespace CloudHeavenApi.Contexts
 
         public bool Admin { get; set; } = false;
 
+        [JsonIgnore]
         public virtual ICollection<PersonBadges> PersonBadgeses { get; set; }
     }
 
@@ -50,8 +52,10 @@ namespace CloudHeavenApi.Contexts
         public Guid Uuid { get; set; }
         public int BadgeId { get; set; }
 
+        [JsonIgnore]
         [ForeignKey("Uuid")] public virtual WebAccount WebAccount { get; set; }
 
+        [JsonIgnore]
         [ForeignKey("BadgeId")] public virtual Badge Badge { get; set; }
     }
 
@@ -65,6 +69,7 @@ namespace CloudHeavenApi.Contexts
         public string BadgeName { get; set; }
         public string BadgeLink { get; set; }
 
+        [JsonIgnore]
         public virtual ICollection<PersonBadges> PersonBadgeses { get; set; }
     }
 }

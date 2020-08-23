@@ -5,10 +5,11 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using CloudHeavenApi.Models;
+using CloudHeavenApi.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace CloudHeavenApi.Services
+namespace CloudHeavenApi.Implementation
 {
     public class MojangService : IAuthService
     {
@@ -17,9 +18,9 @@ namespace CloudHeavenApi.Services
 
         private readonly HttpClient _client = new HttpClient();
 
-        private readonly ILogger<MojangService> _logger;
+        private readonly ILogger<IAuthService> _logger;
 
-        public MojangService(ILogger<MojangService> logger, ICacheService<Identity> cacheService)
+        public MojangService(ILogger<IAuthService> logger, ICacheService<Identity> cacheService)
         {
             _logger = logger;
             _cacheService = cacheService;

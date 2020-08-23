@@ -1,9 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CloudHeavenApi.Controllers
 {
@@ -14,28 +16,28 @@ namespace CloudHeavenApi.Controllers
     {
         private readonly IAuthService _authService;
 
+        private readonly ICacheService<Identity> _cacheService;
+
         private readonly HeavenContext _context;
 
-        public AuthController(HeavenContext context, IAuthService authService)
+        public AuthController(HeavenContext context, IAuthService authService, ICacheService<Identity> cacheService)
         {
             _context = context;
             _authService = authService;
+            _cacheService = cacheService;
         }
 
-
-        [HttpPost("authenticate")]
-        public async Task<ActionResult<TokenProfile>> Authenticate([FromBody] AuthenticateRequest request)
+        [HttpPost("validate")]
+        public async Task<ActionResult> Validate([FromBody] AuthorizeRequest request)
         {
-            var tokenProfile = await _authService.Authenticate(request);
-
-            /*
-            var ac = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(account => account.Uuid == tokenProfile.UUID);
+            var profile = await _authService.Refresh(request);
+            var ac = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(account => account.Uuid == profile.UUID);
             if (ac == null)
             {
                 await _authService.Invalidate(new AuthorizeRequest
                 {
-                    AccessToken = tokenProfile.AccessToken,
-                    ClientToken = tokenProfile.ClientToken
+                    accessToken = profile.AccessToken,
+                    clientToken = profile.ClientToken
                 });
                 throw new AuthException(new ErrorResponse
                 {
@@ -44,32 +46,58 @@ namespace CloudHeavenApi.Controllers
                 });
             }
 
-            if (ac.UserName == tokenProfile.UserName) return Ok(ac);
+            var user = new User(ac);
 
-
-            ac.UserName = tokenProfile.UserName;
-            _context.Entry(ac).State = EntityState.Modified;
-
-            await _context.SaveChangesAsync();
-            */
-
-            var wa = new WebAccount
-            {
-                Admin = true,
-                NickName = "陳大明",
-                UserName = tokenProfile.UserName,
-                Uuid = tokenProfile.UUID,
-                Status = "沒有狀態"
-            };
             return Ok(new
             {
-                user = new User(wa),
+                user,
                 token = new
+                {
+                    clientToken = profile.ClientToken,
+                    accessToken = profile.AccessToken
+                }
+            });
+        }
+
+
+        [HttpPost("authenticate")]
+        public async Task<ActionResult> Authenticate([FromBody] AuthenticateRequest request)
+        {
+            var tokenProfile = await _authService.Authenticate(request);
+
+
+            var ac = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(account => account.Uuid == tokenProfile.UUID);
+            if (ac == null)
+            {
+                await _authService.Invalidate(new AuthorizeRequest
                 {
                     accessToken = tokenProfile.AccessToken,
                     clientToken = tokenProfile.ClientToken
-                }
-            });
+                });
+                throw new AuthException(new ErrorResponse
+                {
+                    Error = "未知的賬戶",
+                    ErrorMessage = "你從未到伺服器登入過。"
+                });
+            }
+
+            var result = new
+            {
+                clientToken = tokenProfile.ClientToken,
+                accessToken = tokenProfile.AccessToken
+            };
+
+            _cacheService.TryUpdate(tokenProfile.ClientToken, id => { id.NickName = ac.NickName; });
+
+            if (ac.UserName != tokenProfile.UserName)
+            {
+                ac.UserName = tokenProfile.UserName;
+                _context.Entry(ac).State = EntityState.Modified;
+
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(result);
         }
 
         [HttpPost("signout")]

@@ -5,7 +5,7 @@ namespace CloudHeavenApi.Services
 {
     public interface IWebSocketService
     {
-        Task OnConnected(WebSocket socket);
+        Task OnConnected(WebSocket socket, string clientToken);
         Task OnDisconnected(WebSocket socket);
         Task ReceiveAsync(WebSocket socket, WebSocketReceiveResult result, byte[] buffer);
         Task SendMessageAsync(string sid, object data);

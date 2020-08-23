@@ -1,4 +1,5 @@
-﻿using CloudHeavenApi.Implementation;
+﻿using System;
+using CloudHeavenApi.Implementation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CloudHeavenApi.Services
@@ -8,6 +9,7 @@ namespace CloudHeavenApi.Services
         void SetItem(string id, T item);
         bool TryGetItem(string id, out T item);
         bool RemoveItem(string id);
+        bool TryUpdate(string id, Action<T> update);
     }
 
 

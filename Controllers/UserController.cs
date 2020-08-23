@@ -24,7 +24,7 @@ namespace CloudHeavenApi.Controllers
             _authService = authService;
         }
 
-        [HttpPost("list")]
+        [HttpPost("users")]
         public async Task<ActionResult> GetUsers([FromBody] AuthorizeRequest request, [FromQuery] int page = 1)
         {
             await _authService.Validate(request);
@@ -37,10 +37,10 @@ namespace CloudHeavenApi.Controllers
         public async Task<ActionResult> GetSelf([FromBody] AuthorizeRequest request)
         {
             var tokenProfile = await _authService.Validate(request);
-            var self = await _context.WebAccounts.Where(s => s.Uuid == tokenProfile.UUID).GroupJoin(
-                    _context.PersonBadges, account => account.Uuid, bd => bd.Uuid,
-                    (account, list) => new {account, Badges = list.DefaultIfEmpty().Select(b => b.Badge)})
-                .FirstOrDefaultAsync();
+            var accounts = await _context.WebAccounts.Where(s => s.Uuid == tokenProfile.UUID).ToArrayAsync();
+            var self = accounts.GroupJoin(
+                _context.PersonBadges.Include(b => b.Badge), account => account.Uuid, bd => bd.Uuid,
+                (account, list) => new {account, Badges = list.Select(b => b.Badge)}).FirstOrDefault();
             if (self == null)
                 return NotFound(new ErrorResponse
                 {
@@ -76,11 +76,10 @@ namespace CloudHeavenApi.Controllers
         {
             await _authService.Validate(request);
             var uuid = new Guid(id);
-            var user = await _context.WebAccounts.Where(s => s.Uuid == uuid).GroupJoin(_context.PersonBadges,
-                    account => account.Uuid, bd => bd.Uuid,
-                    (account, list) => new {account, Badges = list.DefaultIfEmpty().Select(b => b.Badge)})
-                .FirstOrDefaultAsync();
-            ;
+            var list = await _context.WebAccounts.Where(s => s.Uuid == uuid).ToListAsync();
+            var user = list.GroupJoin(_context.PersonBadges.Include(b => b.Badge),
+                account => account.Uuid, bd => bd.Uuid,
+                (account, list) => new {account, Badges = list.Select(b => b.Badge)}).FirstOrDefault();
             if (user == null)
                 return NotFound(new ErrorResponse
                 {
