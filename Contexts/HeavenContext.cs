@@ -17,6 +17,8 @@ namespace CloudHeavenApi.Contexts
         public DbSet<PersonBadges> PersonBadges { get; set; }
         public DbSet<Badge> Badges { get; set; }
 
+        public DbSet<CMI> Cmis { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Badge>().Property(b => b.BadgeId).ValueGeneratedOnAdd();
@@ -42,21 +44,19 @@ namespace CloudHeavenApi.Contexts
 
         public bool Admin { get; set; } = false;
 
-        [JsonIgnore]
-        public virtual ICollection<PersonBadges> PersonBadgeses { get; set; }
+        [JsonIgnore] public virtual ICollection<PersonBadges> PersonBadgeses { get; set; }
     }
 
     [Table("CloudHeaven_PersonBadges")]
     public class PersonBadges
     {
-        public Guid Uuid { get; set; }
-        public int BadgeId { get; set; }
+        [Key] public Guid Uuid { get; set; }
 
-        [JsonIgnore]
-        [ForeignKey("Uuid")] public virtual WebAccount WebAccount { get; set; }
+        [Key] public int BadgeId { get; set; }
 
-        [JsonIgnore]
-        [ForeignKey("BadgeId")] public virtual Badge Badge { get; set; }
+        [JsonIgnore] [ForeignKey("Uuid")] public virtual WebAccount WebAccount { get; set; }
+
+        [JsonIgnore] [ForeignKey("BadgeId")] public virtual Badge Badge { get; set; }
     }
 
     [Table("CloudHeaven_Badge")]
@@ -69,7 +69,19 @@ namespace CloudHeavenApi.Contexts
         public string BadgeName { get; set; }
         public string BadgeLink { get; set; }
 
-        [JsonIgnore]
-        public virtual ICollection<PersonBadges> PersonBadgeses { get; set; }
+        [JsonIgnore] public virtual ICollection<PersonBadges> PersonBadgeses { get; set; }
+    }
+
+    [Table("CMI_users")]
+    public class CMI
+    {
+        [Column(name: "id")]
+        [Key]
+        public int Id { get; set; }
+
+        [Column(name: "player_uuid")]
+        public Guid playerUUID { get; set; }
+        public long LastLoginTime { get; set; }
+        public long TotalPlayTime { get; set; }
     }
 }

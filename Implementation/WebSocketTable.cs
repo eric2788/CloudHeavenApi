@@ -40,10 +40,7 @@ namespace CloudHeavenApi.Implementation
         public async Task Add(WebSocket socket, string clientToken)
         {
             var id = string.IsNullOrEmpty(clientToken) ? Guid.NewGuid().ToString() : clientToken;
-            if (_sockets.ContainsKey(id))
-            {
-                await RemoveSocket(id);
-            }
+            if (_sockets.ContainsKey(id)) await RemoveSocket(id);
             _sockets[id] = socket;
         }
     }

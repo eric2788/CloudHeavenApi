@@ -1,17 +1,17 @@
-﻿using CloudHeavenApi.Services;
-using Microsoft.AspNetCore.Http;
-using System;
+﻿using System;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using CloudHeavenApi.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace CloudHeavenApi.MiddleWaresAndFilters
 {
     public class WebSocketMiddleware : IMiddleware
     {
-        private readonly IWebSocketService _socketService;
         private readonly ILogger<Startup> _logger;
+        private readonly IWebSocketService _socketService;
 
         public WebSocketMiddleware(IWebSocketService socketService, ILogger<Startup> logger)
         {

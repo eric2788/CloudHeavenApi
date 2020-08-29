@@ -42,7 +42,8 @@ namespace CloudHeavenApi.Features
         {
             var container = GetAsObject<SocketMessageContainer>(result, buffer);
             var id = WebSocketTable[socket];
-            Logger.LogInformation($"Received message from socket {id}, message: {JsonConvert.SerializeObject(container)}");
+            Logger.LogInformation(
+                $"Received message from socket {id}, message: {JsonConvert.SerializeObject(container)}");
             ResponseData output = null;
             var ignoreMc = false;
 
@@ -193,7 +194,7 @@ namespace CloudHeavenApi.Features
                 JsonConvert.DeserializeObject<T>(o.ToString());
                 return true;
             }
-            catch (JsonSerializationException)
+            catch (JsonException)
             {
                 return false;
             }

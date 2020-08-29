@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
@@ -31,7 +30,8 @@ namespace CloudHeavenApi.Controllers
         public async Task<ActionResult> Validate([FromBody] AuthorizeRequest request)
         {
             var profile = await _authService.Refresh(request);
-            var ac = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(account => account.Uuid == profile.UUID);
+            var ac = await _context.WebAccounts.AsNoTracking()
+                .FirstOrDefaultAsync(account => account.Uuid == profile.UUID);
             if (ac == null)
             {
                 await _authService.Invalidate(new AuthorizeRequest
@@ -66,7 +66,8 @@ namespace CloudHeavenApi.Controllers
             var tokenProfile = await _authService.Authenticate(request);
 
 
-            var ac = await _context.WebAccounts.AsNoTracking().FirstOrDefaultAsync(account => account.Uuid == tokenProfile.UUID);
+            var ac = await _context.WebAccounts.AsNoTracking()
+                .FirstOrDefaultAsync(account => account.Uuid == tokenProfile.UUID);
             if (ac == null)
             {
                 await _authService.Invalidate(new AuthorizeRequest

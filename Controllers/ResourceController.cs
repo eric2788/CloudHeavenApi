@@ -44,6 +44,7 @@ namespace CloudHeavenApi.Controllers
             if (!self.Admin) return Unauthorized(new {Error = "You are not admin"});
 
             await _context.Badges.AddAsync(editor.Badge);
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
@@ -74,7 +75,7 @@ namespace CloudHeavenApi.Controllers
 
             try
             {
-                _context.Entry(editor).State = EntityState.Modified;
+                _context.Entry(editor.Badge).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)

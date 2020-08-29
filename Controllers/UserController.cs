@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
+using CloudHeavenApi.Features;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
 using Microsoft.AspNetCore.Cors;
@@ -38,9 +39,12 @@ namespace CloudHeavenApi.Controllers
         {
             var tokenProfile = await _authService.Validate(request);
             var accounts = await _context.WebAccounts.Where(s => s.Uuid == tokenProfile.UUID).ToArrayAsync();
-            var self = accounts.GroupJoin(
-                _context.PersonBadges.Include(b => b.Badge), account => account.Uuid, bd => bd.Uuid,
-                (account, list) => new {account, Badges = list.Select(b => b.Badge)}).FirstOrDefault();
+            var self = accounts
+                .GroupJoin(
+                _context.PersonBadges.Include(b => b.Badge), 
+                account => account.Uuid, bd => bd.Uuid,
+                (account, list) => new {account, Badges = list.Select(b => b.Badge)})
+                .Join(_context.Cmis, ac => ac.account.Uuid, cmi => cmi.playerUUID, (ac, cmi) => new {ac.account, ac.Badges, cmi}).FirstOrDefault();
             if (self == null)
                 return NotFound(new ErrorResponse
                 {
@@ -63,8 +67,13 @@ namespace CloudHeavenApi.Controllers
                     ErrorMessage = $"Cannot Found The {tokenProfile.UUID} Account"
                 });
 
-            toUpdate.NickName = editor.Editor.NickName;
-            toUpdate.Status = editor.Editor.Status;
+            if (!editor.Editor.CanDeserialize<NormalEditor>())
+                return BadRequest(new {error = "invalid editor pattern"});
+
+            var edit = editor.Editor.JsonDeserialize<NormalEditor>();
+
+            toUpdate.NickName = edit.NickName;
+            toUpdate.Status = edit.Status;
 
             _context.Entry(toUpdate).State = EntityState.Modified;
             await _context.SaveChangesAsync();
@@ -79,7 +88,8 @@ namespace CloudHeavenApi.Controllers
             var list = await _context.WebAccounts.Where(s => s.Uuid == uuid).ToListAsync();
             var user = list.GroupJoin(_context.PersonBadges.Include(b => b.Badge),
                 account => account.Uuid, bd => bd.Uuid,
-                (account, list) => new {account, Badges = list.Select(b => b.Badge)}).FirstOrDefault();
+                (account, list) => new {account, Badges = list.Select(b => b.Badge)})
+                .Join(_context.Cmis, ac => ac.account.Uuid, cmi => cmi.playerUUID, (ac, cmi) => new { ac.account, ac.Badges, cmi }).FirstOrDefault();
             if (user == null)
                 return NotFound(new ErrorResponse
                 {
@@ -117,19 +127,26 @@ namespace CloudHeavenApi.Controllers
                     ErrorMessage = $"Account {profile.UUID} is not admin"
                 });
 
-            user.NickName = editor.Editor.NickName;
-            user.Status = editor.Editor.Status;
+            if (!editor.Editor.CanDeserialize<NormalEditor>())
+                return BadRequest(new {error = "invalid editor pattern" });
 
-            if (editor.Editor is AdminEditor adminEditor)
+            var edit = editor.Editor.JsonDeserialize<NormalEditor>();
+            user.NickName = edit.NickName;
+            user.Status = edit.Status;
+
+            if (editor.Editor.CanDeserialize<AdminEditor>())
             {
+                var adminEditor = editor.Editor.JsonDeserialize<AdminEditor>();
                 user.Admin = adminEditor.Admin;
-                var userBadges = await _context.PersonBadges.Where(s => s.Uuid == uuid).ToListAsync();
+
+                var userBadges = await _context.PersonBadges.AsNoTracking().Where(s => s.Uuid == uuid).ToListAsync();
                 _context.PersonBadges.RemoveRange(userBadges);
+                await _context.SaveChangesAsync();
                 var toAdd = adminEditor.Badges.Select(bid => new PersonBadges
                 {
                     Uuid = uuid,
                     BadgeId = bid
-                });
+                }).ToList();
                 _context.PersonBadges.AddRange(toAdd);
             }
 
@@ -142,7 +159,7 @@ namespace CloudHeavenApi.Controllers
     public class AccountEditor
     {
         public AuthorizeRequest Request { get; set; }
-        public NormalEditor Editor { get; set; }
+        public object Editor { get; set; }
     }
 
     public class NormalEditor

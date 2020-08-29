@@ -1,5 +1,4 @@
 using System;
-using System.Net.WebSockets;
 using CloudHeavenApi.Contexts;
 using CloudHeavenApi.Features;
 using CloudHeavenApi.Implementation;
@@ -8,14 +7,12 @@ using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.WebSockets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using WebSocketMiddleware = CloudHeavenApi.MiddleWaresAndFilters.WebSocketMiddleware;
 
 namespace CloudHeavenApi
 {
@@ -35,7 +32,7 @@ namespace CloudHeavenApi
 
         private void UseMySQL(DbContextOptionsBuilder builder)
         {
-            builder.UseMySql(Configuration.GetConnectionString("CloudHeavenDb"));
+            builder.UseMySql(Configuration.GetConnectionString("CloudHeavenDb"), opt => opt.EnableRetryOnFailure());
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -63,7 +60,8 @@ namespace CloudHeavenApi
 
             services.AddTransient<WebSocketMiddleware>();
 
-            services.AddControllersWithViews().AddNewtonsoftJson(opt => opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
+            services.AddControllersWithViews().AddNewtonsoftJson(opt =>
+                opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
 
             services.AddMvc(setup => setup.Filters.Add<ExceptionFilters>());
         }
@@ -94,7 +92,7 @@ namespace CloudHeavenApi
 
             app.UseCors();
 
-            app.Map("/ws", (_app) => _app.UseMiddleware<WebSocketMiddleware>());
+            app.Map("/ws", _app => _app.UseMiddleware<WebSocketMiddleware>());
 
             app.UseAuthentication();
 

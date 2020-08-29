@@ -1,7 +1,7 @@
-﻿using CloudHeavenApi.Services;
+﻿using System.Linq;
+using CloudHeavenApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using System.Linq;
 
 namespace CloudHeavenApi.MiddleWaresAndFilters
 {

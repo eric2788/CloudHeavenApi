@@ -10,10 +10,7 @@ namespace CloudHeavenApi.Implementation
 
         public void SetItem(string id, T item)
         {
-            if (string.IsNullOrEmpty(id))
-            {
-                return;
-            }
+            if (string.IsNullOrEmpty(id)) return;
             _cache[id] = item;
         }
 
@@ -21,18 +18,16 @@ namespace CloudHeavenApi.Implementation
         {
             if (string.IsNullOrEmpty(id))
             {
-                item = default(T);
+                item = default;
                 return false;
             }
+
             return _cache.TryGetValue(id, out item);
         }
 
         public bool RemoveItem(string id)
         {
-            if (string.IsNullOrEmpty(id))
-            {
-                return false;
-            }
+            if (string.IsNullOrEmpty(id)) return false;
             return _cache.TryRemove(id, out _);
         }
 
