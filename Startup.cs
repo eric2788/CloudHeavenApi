@@ -20,7 +20,7 @@ namespace CloudHeavenApi
     {
         internal static readonly string[] AllowOrigins =
         {
-            "http://localhost:63342"
+            "easonchu7.github.io"
         };
 
         public Startup(IConfiguration configuration)
