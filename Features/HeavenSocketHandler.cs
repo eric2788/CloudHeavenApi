@@ -37,8 +37,8 @@ namespace CloudHeavenApi.Features
                 }
 
                 var format = string.IsNullOrEmpty(identity.NickName)
-                    ? $"[Website] {identity.UserName}({identity.NickName}) {data.Message}"
-                    : $"[Website] {identity.UserName}: {data.Message}";
+                    ? $"[網站] {identity.UserName}: {data.Message}"
+                    : $"[網站] {identity.UserName}({identity.NickName}) {data.Message}";
 
                 return new ResponseData
                 {
