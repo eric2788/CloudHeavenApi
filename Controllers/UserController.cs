@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using CloudHeavenApi.Contexts;
-using CloudHeavenApi.Features;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
 using Microsoft.AspNetCore.Cors;
@@ -41,10 +40,11 @@ namespace CloudHeavenApi.Controllers
             var accounts = await _context.WebAccounts.Where(s => s.Uuid == tokenProfile.UUID).ToArrayAsync();
             var self = accounts
                 .GroupJoin(
-                _context.PersonBadges.Include(b => b.Badge), 
-                account => account.Uuid, bd => bd.Uuid,
-                (account, list) => new {account, Badges = list.Select(b => b.Badge)})
-                .Join(_context.Cmis, ac => ac.account.Uuid, cmi => cmi.playerUUID, (ac, cmi) => new {ac.account, ac.Badges, cmi}).FirstOrDefault();
+                    _context.PersonBadges.Include(b => b.Badge),
+                    account => account.Uuid, bd => bd.Uuid,
+                    (account, list) => new {account, Badges = list.Select(b => b.Badge)})
+                .Join(_context.Cmis, ac => ac.account.Uuid, cmi => cmi.playerUUID,
+                    (ac, cmi) => new {ac.account, ac.Badges, cmi}).FirstOrDefault();
             if (self == null)
                 return NotFound(new ErrorResponse
                 {
@@ -87,9 +87,10 @@ namespace CloudHeavenApi.Controllers
             var uuid = new Guid(id);
             var list = await _context.WebAccounts.Where(s => s.Uuid == uuid).ToListAsync();
             var user = list.GroupJoin(_context.PersonBadges.Include(b => b.Badge),
-                account => account.Uuid, bd => bd.Uuid,
-                (account, list) => new {account, Badges = list.Select(b => b.Badge)})
-                .Join(_context.Cmis, ac => ac.account.Uuid, cmi => cmi.playerUUID, (ac, cmi) => new { ac.account, ac.Badges, cmi }).FirstOrDefault();
+                    account => account.Uuid, bd => bd.Uuid,
+                    (account, list) => new {account, Badges = list.Select(b => b.Badge)})
+                .Join(_context.Cmis, ac => ac.account.Uuid, cmi => cmi.playerUUID,
+                    (ac, cmi) => new {ac.account, ac.Badges, cmi}).FirstOrDefault();
             if (user == null)
                 return NotFound(new ErrorResponse
                 {
@@ -128,7 +129,7 @@ namespace CloudHeavenApi.Controllers
                 });
 
             if (!editor.Editor.CanDeserialize<NormalEditor>())
-                return BadRequest(new {error = "invalid editor pattern" });
+                return BadRequest(new {error = "invalid editor pattern"});
 
             var edit = editor.Editor.JsonDeserialize<NormalEditor>();
             user.NickName = edit.NickName;

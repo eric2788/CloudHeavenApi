@@ -75,12 +75,10 @@ namespace CloudHeavenApi.Contexts
     [Table("CMI_users")]
     public class CMI
     {
-        [Column(name: "id")]
-        [Key]
-        public int Id { get; set; }
+        [Column("id")] [Key] public int Id { get; set; }
 
-        [Column(name: "player_uuid")]
-        public Guid playerUUID { get; set; }
+        [Column("player_uuid")] public Guid playerUUID { get; set; }
+
         public long LastLoginTime { get; set; }
         public long TotalPlayTime { get; set; }
     }

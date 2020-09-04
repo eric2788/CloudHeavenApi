@@ -56,8 +56,8 @@ namespace CloudHeavenApi
             services.AddSingleton<IAuthService, MojangService>();
             services.RegisterCache<Identity>();
             services.AddSingleton<WebSocketTable>();
+            services.LoadSocketMessageHandler();
             services.AddSingleton<IWebSocketService, HeavenSocketHandler>();
-
             services.AddTransient<WebSocketMiddleware>();
 
             services.AddControllersWithViews().AddNewtonsoftJson(opt =>

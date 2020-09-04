@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using CloudHeavenApi.Implementation;
@@ -13,11 +13,89 @@ namespace CloudHeavenApi.Features
     public class HeavenSocketHandler : WebSocketHandler
     {
         private readonly ICacheService<Identity> _cacheService;
+        private readonly SocketMessageHandler _messageHandler;
 
         public HeavenSocketHandler(WebSocketTable socketTable, ILogger<IWebSocketService> logger,
-            ICacheService<Identity> cacheService) : base(socketTable, logger)
+            ICacheService<Identity> cacheService, SocketMessageHandler messageHandler) : base(socketTable, logger)
         {
             _cacheService = cacheService;
+            _messageHandler = messageHandler;
+
+            _messageHandler.RegisterHandler(MessageType.BrowserMessage, (o, id) =>
+            {
+                var data = o.JsonDeserialize<SocketMessageContainer.BrowserMessageData>();
+                if (!_cacheService.TryGetItem(data.ClientToken, out var identity))
+                {
+                    Logger.LogWarning(
+                        $"The message received from {id} does not have any identity in cache (Not Login?)");
+                    return new ResponseData
+                    {
+                        Type = ResponseType.Error,
+                        Data = "Invalid Token, Unknown User Identity.",
+                        Receiver = Receiver.Self
+                    };
+                }
+
+                var format = string.IsNullOrEmpty(identity.NickName)
+                    ? $"[Website] {identity.UserName}({identity.NickName}) {data.Message}"
+                    : $"[Website] {identity.UserName}: {data.Message}";
+
+                return new ResponseData
+                {
+                    Type = ResponseType.Message,
+                    Data = format,
+                    Receiver = Receiver.All
+                };
+            });
+
+            _messageHandler.RegisterHandler(MessageType.MinecraftMessage, (obj, id) =>
+            {
+                if (!id.Equals("mc-server-socket"))
+                    return new ResponseData
+                    {
+                        Type = ResponseType.Error,
+                        Data = "socket id is not belongs to mc server",
+                        Receiver = Receiver.Self
+                    };
+
+                var data = obj.JsonDeserialize<SocketMessageContainer.McMessageData>();
+
+                if (!data.Token.Equals("965d1e06f5df5708ae154e7751f9c631"))
+                    return new ResponseData
+                    {
+                        Type = ResponseType.Error,
+                        Data = "mc server token mismatched",
+                        Receiver = Receiver.Self
+                    };
+
+                return new ResponseData
+                {
+                    Type = ResponseType.Message,
+                    Data = data.Message,
+                    Receiver = Receiver.Browser
+                };
+            });
+
+            _messageHandler.RegisterHandler(MessageType.ServerOnline, (obj, id) =>
+            {
+                if (!id.Equals("mc-server-socket"))
+                    return new ResponseData
+                    {
+                        Type = ResponseType.Error,
+                        Data = "socket id is not belongs to mc server",
+                        Receiver = Receiver.Self
+                    };
+
+                var data = obj.JsonDeserialize<IEnumerable<string>>();
+
+                logger.LogInformation($"Received Server Info Online Count {data.Count()}");
+                return new ResponseData
+                {
+                    Type = ResponseType.ServerInfo,
+                    Data = data,
+                    Receiver = Receiver.Browser
+                };
+            });
         }
 
         public override async Task OnSocketConnected(WebSocket socket)
@@ -44,165 +122,38 @@ namespace CloudHeavenApi.Features
             var id = WebSocketTable[socket];
             Logger.LogInformation(
                 $"Received message from socket {id}, message: {JsonConvert.SerializeObject(container)}");
-            ResponseData output = null;
-            var ignoreMc = false;
 
             Logger.LogInformation($"type: {container.Type}, Data: {container.Data}");
             Logger.LogInformation($"Data With JSON: {JsonConvert.SerializeObject(container.Data)}");
 
-            // Socket Sent From MC Server
 
-            var containerData = container.Data;
-
-            if (id.Equals("mc-server-socket"))
+            if (!_messageHandler.TryGetHandler(container.Type, out var handle))
             {
-                ignoreMc = true;
-                if (containerData.CanDeserialize<McMessageData>() && container.Type == RequestType.Message)
-                {
-                    var data = containerData.JsonDeserialize<McMessageData>();
-                    output = new ResponseData
-                    {
-                        Type = ResponseType.Message,
-                        Data = new OutputContainer
-                        {
-                            FromMC = true,
-                            Identity = new Identity
-                            {
-                                NickName = "",
-                                UserName = data.UserName,
-                                UUID = data.Guid
-                            },
-                            Message = data.Message,
-                            Server = data.Server
-                        }
-                    };
-                }
-                else if (containerData.CanDeserialize<McServerData>() && container.Type == RequestType.SendBrowser)
-                {
-                    var serverData = containerData.JsonDeserialize<McServerData>();
-                    var online = serverData.Online;
-                    Logger.LogInformation($"Received Server Information: {JsonConvert.SerializeObject(online)}");
-                    output = new ResponseData
-                    {
-                        Type = ResponseType.ServerInfo,
-                        Data = online
-                    };
-                }
-                else
-                {
-                    Logger.LogWarning(
-                        $"The message received from {id} is not match the pattern MCData with type {container.Type}");
-                }
+                Logger.LogWarning($"Unknown Socket Message Type from socket {id}, Skipped");
+                return;
             }
 
-            // Socket Sent From Browser
-
-            else
-            {
-                if (containerData.CanDeserialize<BrowserMessageData>() && container.Type == RequestType.Message)
-                {
-                    var msgData = containerData.JsonDeserialize<BrowserMessageData>();
-                    if (!_cacheService.TryGetItem(msgData.ClientToken, out var identity))
-                    {
-                        Logger.LogWarning(
-                            $"The message received from {id} does not have any identity in cache (Not Login?)");
-                        return;
-                    }
-
-                    output = new ResponseData
-                    {
-                        Type = ResponseType.Message,
-                        Data = new OutputContainer
-                        {
-                            FromMC = false,
-                            Identity = identity,
-                            Message = msgData.Message,
-                            Server = "Website"
-                        }
-                    };
-                }
-                else
-                {
-                    Logger.LogWarning(
-                        $"The message received from {id} is not match the pattern BrowserData with type {container.Type}");
-                }
-            }
+            var output = handle(container.Data, id);
 
             if (output is null) return;
 
-            await BroadcastAsync(output, ignoreMc);
-        }
-    }
-
-    public class SocketMessageContainer
-    {
-        public RequestType Type { get; set; }
-        public object Data { get; set; }
-    }
-
-    public class BrowserMessageData
-    {
-        public string ClientToken { get; set; }
-        public string Message { get; set; }
-    }
-
-    public class McMessageData
-    {
-        public Guid Guid { get; set; }
-        public string UserName { get; set; }
-        public string Message { get; set; }
-        public string Server { get; set; }
-    }
-
-    public class ResponseData
-    {
-        public ResponseType Type { get; set; }
-        public object Data { get; set; }
-    }
-
-    public class McServerData
-    {
-        public IEnumerable<string> Online { get; set; }
-    }
-
-    public class OutputContainer
-    {
-        public Identity Identity { get; set; }
-        public string Message { get; set; }
-        public bool FromMC { get; set; }
-        public string Server { get; set; }
-    }
-
-    public enum ResponseType
-    {
-        ServerInfo,
-        Message
-    }
-
-    public enum RequestType
-    {
-        Message,
-        SendBrowser
-    }
-
-    public static class SocketMessageExtension
-    {
-        public static bool CanDeserialize<T>(this object o)
-        {
-            try
+            switch (output.Receiver)
             {
-                JsonConvert.DeserializeObject<T>(o.ToString());
-                return true;
+                case Receiver.All:
+                    await BroadcastAsync(output);
+                    break;
+                case Receiver.Browser:
+                    await BroadcastAsync(output, true);
+                    break;
+                case Receiver.Minecraft:
+                    await SendMessageAsync("mc-server-socket", output);
+                    break;
+                case Receiver.Self:
+                    await SendMessageAsync(socket, output);
+                    break;
+                default:
+                    return;
             }
-            catch (JsonException)
-            {
-                return false;
-            }
-        }
-
-        public static T JsonDeserialize<T>(this object o)
-        {
-            return JsonConvert.DeserializeObject<T>(o.ToString());
         }
     }
 }
