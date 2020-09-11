@@ -53,12 +53,8 @@ namespace CloudHeavenApi.Implementation
 
         public async Task BroadcastAsync(object data, bool ignoreMc = false)
         {
-            foreach (var (id, socket) in WebSocketTable)
-            {
-                if (id.Equals("mc-server-socket") && ignoreMc) continue;
-                if (socket.State == WebSocketState.Open)
-                    await SendMessageAsync(socket, data);
-            }
+            var message = JsonConvert.SerializeObject(data);
+            await BroadcastAsync(message, ignoreMc);
         }
 
         public async Task SendMessageAsync(string sid, object data)
@@ -86,7 +82,7 @@ namespace CloudHeavenApi.Implementation
             if (socket.State != WebSocketState.Open)
                 return;
 
-            await socket.SendAsync(new ArraySegment<byte>(Encoding.ASCII.GetBytes(message),
+            await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(message),
                     0,
                     message.Length),
                 WebSocketMessageType.Text,
@@ -96,15 +92,8 @@ namespace CloudHeavenApi.Implementation
 
         protected async Task SendMessageAsync(WebSocket socket, object data)
         {
-            if (socket.State != WebSocketState.Open)
-                return;
             var message = JsonConvert.SerializeObject(data);
-            await socket.SendAsync(new ArraySegment<byte>(Encoding.ASCII.GetBytes(message),
-                    0,
-                    message.Length),
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None);
+            await SendMessageAsync(socket, message);
         }
     }
 }
