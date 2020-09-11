@@ -20,7 +20,7 @@ namespace CloudHeavenApi
     {
         internal static readonly string[] AllowOrigins =
         {
-            "https://easonchu7.github.io"
+            "https://easonchu7.github.io", "https://www.mcchv.space/"
         };
 
         public Startup(IConfiguration configuration)
@@ -81,7 +81,7 @@ namespace CloudHeavenApi
 
             var options = new WebSocketOptions
             {
-                KeepAliveInterval = TimeSpan.FromSeconds(120),
+                KeepAliveInterval = TimeSpan.FromSeconds(20),
                 ReceiveBufferSize = 4 * 1024
             };
             foreach (var allowOrigin in AllowOrigins) options.AllowedOrigins.Add(allowOrigin);

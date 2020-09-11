@@ -28,9 +28,10 @@ namespace CloudHeavenApi.Controllers
         public async Task<ActionResult> GetUsers([FromBody] AuthorizeRequest request, [FromQuery] int page = 1)
         {
             await _authService.Validate(request);
+            var total = await _context.WebAccounts.CountAsync();
             var list = await _context.WebAccounts.Skip(30 * Math.Max(0, page - 1)).Take(30).Select(ac => new User(ac))
                 .ToListAsync();
-            return Ok(list);
+            return Ok(new {total, list});
         }
 
         [HttpPost]
