@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using CloudHeavenApi.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -68,7 +69,8 @@ namespace CloudHeavenApi.Implementation
 
         protected string GetAsString(WebSocketReceiveResult result, byte[] buffer)
         {
-            return Encoding.UTF8.GetString(buffer, 0, result.Count);
+            var url = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            return HttpUtility.UrlDecode(url, Encoding.UTF8);
         }
 
         protected T GetAsObject<T>(WebSocketReceiveResult result, byte[] buffer)
@@ -82,9 +84,16 @@ namespace CloudHeavenApi.Implementation
             if (socket.State != WebSocketState.Open)
                 return;
 
-            await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(message),
+            var msg = HttpUtility.UrlEncode(message);
+
+            if (msg is null)
+            {
+                return;
+            }
+
+            await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(msg),
                     0,
-                    message.Length),
+                    msg.Length),
                 WebSocketMessageType.Text,
                 true,
                 CancellationToken.None);
