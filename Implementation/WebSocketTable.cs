@@ -31,6 +31,10 @@ namespace CloudHeavenApi.Implementation
 
         public async Task RemoveSocket(string id)
         {
+            if (id is null)
+            {
+                return;
+            }
             if (_sockets.TryRemove(id, out var socket))
                 await socket.CloseAsync(WebSocketCloseStatus.NormalClosure,
                     "Closed by the Restful Api Server",

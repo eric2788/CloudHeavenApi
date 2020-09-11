@@ -45,7 +45,7 @@ namespace CloudHeavenApi.MiddleWaresAndFilters
                         await _socketService.OnDisconnected(socket);
                 });
             }
-            catch (WebSocketException e)
+            catch (Exception e)
             {
                 _logger.LogError(e.Message);
             }
