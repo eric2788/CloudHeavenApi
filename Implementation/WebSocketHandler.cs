@@ -69,8 +69,7 @@ namespace CloudHeavenApi.Implementation
 
         protected string GetAsString(WebSocketReceiveResult result, byte[] buffer)
         {
-            var url = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            return HttpUtility.UrlDecode(url, Encoding.UTF8);
+            return Encoding.UTF8.GetString(buffer, 0, result.Count); ;
         }
 
         protected T GetAsObject<T>(WebSocketReceiveResult result, byte[] buffer)
@@ -84,16 +83,9 @@ namespace CloudHeavenApi.Implementation
             if (socket.State != WebSocketState.Open)
                 return;
 
-            var msg = HttpUtility.UrlEncode(message);
-
-            if (msg is null)
-            {
-                return;
-            }
-
-            await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(msg),
+            await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(message),
                     0,
-                    msg.Length),
+                    message.Length),
                 WebSocketMessageType.Text,
                 true,
                 CancellationToken.None);

@@ -38,11 +38,19 @@ namespace CloudHeavenApi.MiddleWaresAndFilters
 
                 await Receive(socket, async (result, buffer) =>
                 {
-                    if (result.MessageType == WebSocketMessageType.Text)
-                        await _socketService.ReceiveAsync(socket, result, buffer);
+                    try
+                    {
+                        if (result.MessageType == WebSocketMessageType.Text)
+                            await _socketService.ReceiveAsync(socket, result, buffer);
 
-                    else if (result.MessageType == WebSocketMessageType.Close)
-                        await _socketService.OnDisconnected(socket);
+                        else if (result.MessageType == WebSocketMessageType.Close)
+                            await _socketService.OnDisconnected(socket);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e.Message);
+                    }
+                   
                 });
             }
             catch (Exception e)

@@ -20,7 +20,7 @@ namespace CloudHeavenApi
     {
         internal static readonly string[] AllowOrigins =
         {
-            "https://easonchu7.github.io", "https://www.mcchv.space/"
+            "https://easonchu7.github.io", "https://www.mcchv.space"
         };
 
         public Startup(IConfiguration configuration)
@@ -72,11 +72,6 @@ namespace CloudHeavenApi
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-            }
-            else
-            {
-                app.UseHsts();
-                app.UseHttpsRedirection();
             }
 
             var options = new WebSocketOptions

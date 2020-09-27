@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using CloudHeavenApi.Implementation;
 using CloudHeavenApi.Models;
 using CloudHeavenApi.Services;
@@ -35,15 +38,15 @@ namespace CloudHeavenApi.Features
                         Receiver = Receiver.Self
                     };
                 }
-
+                logger.LogInformation($"Received Message: {data.Message.ToDecoded()} from User {identity.UserName} in browser.");
                 var format = string.IsNullOrEmpty(identity.NickName)
-                    ? $"[網站] {identity.UserName}: {data.Message}"
-                    : $"[網站] {identity.UserName}({identity.NickName}) {data.Message}";
-
+                    ? $"[Website] {identity.UserName}: {data.Message.ToDecoded()}"
+                    : $"[Website] {identity.UserName}({identity.NickName}) {data.Message.ToDecoded()}";
+                logger.LogInformation($"Ready to send the message {format}, encoded data as: ${format.ToEncoded()}");
                 return new ResponseData
                 {
                     Type = ResponseType.Message,
-                    Data = format,
+                    Data = format.ToEncoded(),
                     Receiver = Receiver.All
                 };
             });
@@ -133,7 +136,16 @@ namespace CloudHeavenApi.Features
                 return;
             }
 
-            var output = handle(container.Data, id);
+            ResponseData output;
+            try
+            {
+                output = handle(container.Data, id);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message, e);
+                return;
+            }
 
             if (output is null) return;
 

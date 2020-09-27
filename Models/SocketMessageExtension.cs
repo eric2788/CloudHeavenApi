@@ -1,4 +1,8 @@
-﻿using CloudHeavenApi.Features;
+﻿using System;
+using System.Security.Policy;
+using System.Text;
+using System.Web;
+using CloudHeavenApi.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -28,6 +32,16 @@ namespace CloudHeavenApi.Models
         {
             service.AddSingleton<SocketMessageHandler>();
             return service;
+        }
+
+        public static string ToEncoded(this string plain)
+        {
+            return Uri.EscapeUriString(plain);
+        }
+
+        public static string ToDecoded(this string encoded)
+        {
+            return Uri.UnescapeDataString(encoded);
         }
     }
 
